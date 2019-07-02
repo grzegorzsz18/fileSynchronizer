@@ -1,0 +1,4 @@
+package data
+
+const FILE_TRANSFERRED_SIZE = 1024
+const FILE_NAME_SIZE = 128
