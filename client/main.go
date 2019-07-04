@@ -28,7 +28,8 @@ func main() {
 	//	fmt.Println(f.Name, f.Modification, f.Hash)
 	//}
 
-
-
-	files.SendFileToServer(clientConfig, "name")
+	err = files.SendFileToServer(clientConfig, "example.txt")
+	if err != nil {
+		fmt.Print("error while sending file %v", err)
+	}
 }
