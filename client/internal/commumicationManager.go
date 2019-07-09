@@ -9,11 +9,11 @@ import (
 	"net/http"
 )
 
-func RetrieveFilesInfoFromServer(config *data.ClientConfig) ([]data2.FileDetails, error) {
+func RetrieveFilesInfoFromServer(config data.ClientConfig) (map[uint32]data2.FileDetails, error) {
 
 	jsonData, _ := json.Marshal(data2.UserDetails{
 		Name:     config.UserName,
-		Password: config.UserPasswordHash,
+		Password: config.GetUserPasswordHash(),
 	})
 
 	resp, err := http.Post("http://"+config.ServerHost+":"+config.ServerPortRest+"/files", "application/json", bytes.NewBuffer(jsonData))
@@ -28,7 +28,7 @@ func RetrieveFilesInfoFromServer(config *data.ClientConfig) ([]data2.FileDetails
 		return nil, nil
 	}
 
-	clientDetails := make([]data2.FileDetails, 0)
+	var clientDetails map[uint32]data2.FileDetails
 
 	err = json.NewDecoder(resp.Body).Decode(&clientDetails)
 

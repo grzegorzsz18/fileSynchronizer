@@ -7,14 +7,13 @@ import (
 	"path/filepath"
 )
 
-func GetFilesList(filePath string) []data.FileDetails {
-	var files []data.FileDetails
+func GetFilesList(filePath string) map[uint32]data.FileDetails {
+	files := map[uint32]data.FileDetails{}
 	_ = filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
-		files = append(files, data.FileDetails{
+		files[calculateFileHash(info)] = data.FileDetails{
 			Name:         info.Name(),
 			Modification: info.ModTime(),
-			Hash:         calculateFileHash(info),
-		})
+		}
 		return nil
 	})
 	return files

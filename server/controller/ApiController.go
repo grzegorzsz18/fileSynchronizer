@@ -17,17 +17,23 @@ func ApiController() {
 }
 
 func files(rw http.ResponseWriter, req *http.Request) {
-	if req.Method == "GET" {
+	if req.Method == "POST" {
 		dec := json.NewDecoder(req.Body)
 		var userData = data.UserDetails{}
-		_ = dec.Decode(&userData)
+		err := dec.Decode(&userData)
+
+		if err != nil {
+			fmt.Print("error while decoding")
+		}
 
 		userDB := user.GetUserDBConnection()
 		if userDB.CheckUserCredentials(userData.Name, userData.Password) {
 			files := pkg.GetFilesList(userData.Name)
-			filesJson, _ := json.Marshal(files)
+			err := json.NewEncoder(rw).Encode(files)
+			if err != nil {
+				fmt.Printf("error while encoding file list")
+			}
 			fmt.Println("user got info")
-			_, _ = rw.Write([]byte(filesJson))
 		} else {
 			fmt.Println("wrong user credentials")
 			rw.WriteHeader(401)

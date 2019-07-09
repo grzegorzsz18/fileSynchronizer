@@ -2,34 +2,29 @@ package main
 
 import (
 	"fileSender/client/internal"
-	"fileSender/client/internal/data"
 	"fileSender/client/internal/files"
 	"fmt"
+	"time"
 )
 
 func main() {
 
-	var clientConfig data.ClientConfig
 	var err error
-	err = internal.ReadConfig(&clientConfig)
+
+	clientConfig, err := internal.ReadConfig()
 	//
 	if err != nil {
 		fmt.Printf("error while reading config %v", err)
 		panic(1)
 	}
-	//
-	//fileDetails, err := internal.RetrieveFilesInfoFromServer(&clientConfig)
-	//if err != nil {
-	//	fmt.Printf("error while connecting to server %v", err)
-	//	panic(1)
-	//}
-	//
-	//for _ , f := range fileDetails{
-	//	fmt.Println(f.Name, f.Modification, f.Hash)
-	//}
 
-	err = files.SendFileToServer(clientConfig, "example.txt")
-	if err != nil {
-		fmt.Print("error while sending file %v", err)
+	for {
+
+		files.LocalFilesChecker(clientConfig)
+
+		fmt.Println("next iter")
+
+		time.Sleep(time.Second * time.Duration(clientConfig.RefreshFilesTime))
+
 	}
 }

@@ -2,27 +2,31 @@ package files
 
 import (
 	"encoding/binary"
-	"errors"
 	"fileSender/client/internal/data"
 	data2 "fileSender/pkg/data"
 	"fmt"
 	"net"
 	"os"
+	"sync"
 )
 
-func SendFileToServer(config data.ClientConfig, fileName string) error {
+func SendFileToServer(config data.ClientConfig, fileName string, wg *sync.WaitGroup) {
 
-	stat, err := os.Stat(fileName)
+	defer wg.Done()
+
+	path := config.DirectoryPath + "/" + fileName
+
+	stat, err := os.Stat(path)
 
 	if os.IsNotExist(err) {
-		return errors.New("file not exists")
+		fmt.Printf("file not exists")
 	}
 
 	connection, err := net.Dial("tcp", config.ServerHost+":"+config.ServerPortTCP)
 
 	defer connection.Close()
 
-	fileDetail := convertFileDetailToBinary(fileName, uint32(stat.Size()))
+	fileDetail := convertFileDetailToBinary(fileName, uint32(stat.Size()), config.UserName)
 
 	_, err = connection.Write([]byte(fileDetail))
 
@@ -39,24 +43,26 @@ func SendFileToServer(config data.ClientConfig, fileName string) error {
 	}
 
 	if canTransfer == 0 {
-		return errors.New("cannot send file to server")
+		fmt.Printf("cannot send file to server")
 	}
 
-	sendingFileLoop(fileName, connection)
-
-	return nil
-}
-
-func sendingFileLoop(fileName string, connection net.Conn) {
-	file, err := os.Open(fileName)
+	file, err := os.Open(path)
 	if err != nil {
 		fmt.Printf("error while opening a file %v", err)
 	}
+
+	sendingFileLoop(file, connection)
+
+}
+
+func sendingFileLoop(sendingFile *os.File, connection net.Conn) {
+
+	var err error
+
 	fileBuffer := make([]byte, data2.FILE_TRANSFERRED_SIZE)
 	for rSize := 1; ; {
 
-		rSize, err = file.Read(fileBuffer)
-
+		rSize, err = sendingFile.Read(fileBuffer)
 		if rSize == 0 {
 			break
 		}
@@ -64,8 +70,7 @@ func sendingFileLoop(fileName string, connection net.Conn) {
 		if err != nil {
 			fmt.Printf("error while reading the file %v", err)
 		}
-
-		_, err := connection.Write(fileBuffer[:rSize])
+		_, err = connection.Write(fileBuffer[:rSize])
 
 		if err != nil {
 			fmt.Printf("error while sending the file %v", err)
@@ -73,9 +78,9 @@ func sendingFileLoop(fileName string, connection net.Conn) {
 	}
 }
 
-func convertFileDetailToBinary(fileName string, fileS uint32) []byte {
-	fileDetail := make([]byte, data2.FILE_NAME_SIZE+4)
-	fileDetail = []byte(fileName)
+func convertFileDetailToBinary(fileName string, fileS uint32, userName string) []byte {
+	fileDetail := make([]byte, data2.FILE_DETAILS_SIZE)
+	fileDetail = []byte(fileName + ":" + userName)
 	fileSize := make([]byte, 4)
 	binary.LittleEndian.PutUint32(fileSize, fileS)
 	fileDetail = append(fileDetail, fileSize...)

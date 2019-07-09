@@ -1,19 +1,36 @@
 package internal
 
 import (
+	"encoding/json"
 	"fileSender/client/internal/data"
-	data2 "fileSender/pkg/data"
+	"fmt"
+	"io/ioutil"
+	"os"
 )
 
-func ReadConfig(config *data.ClientConfig) error {
+func ReadConfig() (data.ClientConfig, error) {
 
-	config.RefreshFilesTime = 1
-	config.ServerHost = "localhost"
-	config.ServerPortRest = "18080"
-	config.UserName = "user"
-	config.UserPasswordHash = data2.EncodePassword("password")
-	config.UserEncriptionKey = data2.EncodePassword("." + "password")
-	config.ServerPortTCP = "22222"
+	file, err := os.Open("config.json")
 
-	return nil
+	defer file.Close()
+
+	if err != nil {
+		fmt.Printf("Cannot find config.json file")
+	}
+
+	conf, err := ioutil.ReadAll(file)
+
+	if err != nil {
+		fmt.Printf("Error while parsing json file")
+	}
+
+	var config data.ClientConfig
+
+	err = json.Unmarshal(conf, &config)
+
+	if err != nil {
+		fmt.Printf("Error while unmarshalling data")
+	}
+
+	return config, nil
 }

@@ -33,7 +33,7 @@ func HandleFilesReceining() {
 func receiveFileFromClient(connection net.Conn) {
 
 	defer connection.Close()
-	fileDetails := make([]byte, data.FILE_NAME_SIZE+4)
+	fileDetails := make([]byte, data.FILE_DETAILS_SIZE+4)
 
 	size, err := connection.Read(fileDetails)
 
@@ -41,7 +41,7 @@ func receiveFileFromClient(connection net.Conn) {
 		fmt.Print("Error while reading filename")
 	}
 
-	fileName, fileSize := getFileDetailsFromBinary(fileDetails, size)
+	fileName, fileSize, fileOwner := getFileDetailsFromBinary(fileDetails, uint32(size))
 
 	canTransfer := make([]byte, 2)
 	binary.LittleEndian.PutUint16(canTransfer, 1)
@@ -52,7 +52,7 @@ func receiveFileFromClient(connection net.Conn) {
 		fmt.Printf("error while sending SEND FILE permission to client")
 	}
 
-	file, err := os.Create(fileName)
+	file, err := os.Create(fileOwner + "/" + fileName)
 
 	if err != nil {
 		fmt.Printf("error while creating file %v", err)
@@ -64,13 +64,13 @@ func receiveFileFromClient(connection net.Conn) {
 func receivingFileLoop(fileSize uint32, connection net.Conn, file *os.File) {
 	var receivedData uint32 = 0
 	for receivedData < fileSize {
+		//todo blokować infinite loop np 3x odebrano zero to wylacz
 		tmp := make([]byte, data.FILE_TRANSFERRED_SIZE)
 		rSize, err := connection.Read(tmp)
 		receivedData += uint32(rSize)
 		if err != nil {
 			fmt.Printf("error while receiving the file %v", err)
 		}
-		fmt.Println(rSize)
 		_, err = file.Write(tmp[:rSize])
 
 		if err != nil {
@@ -79,10 +79,12 @@ func receivingFileLoop(fileSize uint32, connection net.Conn, file *os.File) {
 	}
 }
 
-func getFileDetailsFromBinary(fileDetails []byte, size int) (string, uint32) {
-	bytesFileName := fileDetails[:size-4]
+func getFileDetailsFromBinary(fileDetails []byte, size uint32) (string, uint32, string) {
+	bytesFileDetails := fileDetails[:size-4]
 	bytesFileSize := fileDetails[size-4:]
-	fileName := strings.Trim(string(bytesFileName), ":")
 	fileSize := binary.LittleEndian.Uint32(bytesFileSize)
-	return fileName, fileSize
+	fileDetailsSplitted := strings.Split(string(bytesFileDetails), ":")
+	fileName := fileDetailsSplitted[0]
+	fileOwner := fileDetailsSplitted[1]
+	return fileName, fileSize, fileOwner
 }
