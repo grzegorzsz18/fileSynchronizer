@@ -15,9 +15,8 @@ var userDb UserDB
 func ConnectToUserDatabase() {
 	users := make(map[string]User, 0)
 	users["user"] = User{
-		Nick:          "user",
-		PasswordHash:  data.EncodePassword("password"),
-		EncryptionKey: data.EncodePassword("user" + "password"),
+		Nick:         "user",
+		PasswordHash: data.EncodePassword("password"),
 	}
 	userDb = UserDB{
 		users: users,
@@ -43,9 +42,8 @@ func (UserDB) AddUserToDB(userName string, password string) error {
 		return errors.New("User already exists")
 	} else {
 		userDb.users[userName] = User{
-			Nick:          userName,
-			PasswordHash:  data.EncodePassword(password),
-			EncryptionKey: data.EncodePassword(userName + password),
+			Nick:         userName,
+			PasswordHash: data.EncodePassword(password),
 		}
 		_ = os.Mkdir(userName, 777)
 	}

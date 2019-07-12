@@ -23,17 +23,18 @@ func files(rw http.ResponseWriter, req *http.Request) {
 		err := dec.Decode(&userData)
 
 		if err != nil {
-			fmt.Print("error while decoding")
+			fmt.Println("error while decoding")
 		}
 
 		userDB := user.GetUserDBConnection()
 		if userDB.CheckUserCredentials(userData.Name, userData.Password) {
-			files := pkg.GetFilesList(userData.Name)
+			var userPath string
+			userPath = userData.Name + userData.Path
+			files := pkg.GetFilesList(userPath)
 			err := json.NewEncoder(rw).Encode(files)
 			if err != nil {
-				fmt.Printf("error while encoding file list")
+				fmt.Println("error while encoding file list")
 			}
-			fmt.Println("user got info")
 		} else {
 			fmt.Println("wrong user credentials")
 			rw.WriteHeader(401)

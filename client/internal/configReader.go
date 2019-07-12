@@ -15,13 +15,13 @@ func ReadConfig() (data.ClientConfig, error) {
 	defer file.Close()
 
 	if err != nil {
-		fmt.Printf("Cannot find config.json file")
+		fmt.Println("Cannot find config.json file")
 	}
 
 	conf, err := ioutil.ReadAll(file)
 
 	if err != nil {
-		fmt.Printf("Error while parsing json file")
+		fmt.Println("Error while parsing json file")
 	}
 
 	var config data.ClientConfig
@@ -29,7 +29,7 @@ func ReadConfig() (data.ClientConfig, error) {
 	err = json.Unmarshal(conf, &config)
 
 	if err != nil {
-		fmt.Printf("Error while unmarshalling data")
+		fmt.Println("Error while unmarshalling data")
 	}
 
 	return config, nil

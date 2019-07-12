@@ -14,13 +14,13 @@ func main() {
 	clientConfig, err := internal.ReadConfig()
 	//
 	if err != nil {
-		fmt.Printf("error while reading config %v", err)
+		fmt.Printf("error while reading config %v \n", err)
 		panic(1)
 	}
 
 	for {
 
-		files.LocalFilesChecker(clientConfig)
+		files.LocalFilesSendingManager(clientConfig)
 
 		fmt.Println("next iter")
 

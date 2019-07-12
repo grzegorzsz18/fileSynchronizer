@@ -3,15 +3,15 @@ package data
 import "fileSender/pkg/data"
 
 type ClientConfig struct {
-	UserName          string
-	UserPassword      string
-	userPasswordHash  string
-	ServerHost        string
-	ServerPortRest    string
-	ServerPortTCP     string
-	RefreshFilesTime  int
-	userEncriptionKey string
-	DirectoryPath     string
+	UserName           string
+	UserPassword       string
+	userPasswordHash   string
+	ServerHost         string
+	ServerPortRest     string
+	ServerPortTCP      string
+	RefreshFilesTime   int
+	userEncriptionKey  string
+	LocalDirectoryPath string
 }
 
 func (c ClientConfig) GetUserPasswordHash() string {

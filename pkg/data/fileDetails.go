@@ -7,4 +7,5 @@ import (
 type FileDetails struct {
 	Name         string
 	Modification time.Time
+	IsDirectory  bool
 }

@@ -2,7 +2,9 @@ package files
 
 import (
 	"encoding/binary"
+	"fileSender/client/internal"
 	"fileSender/client/internal/data"
+	"fileSender/pkg"
 	data2 "fileSender/pkg/data"
 	"fmt"
 	"net"
@@ -10,28 +12,67 @@ import (
 	"sync"
 )
 
-func SendFileToServer(config data.ClientConfig, fileName string, wg *sync.WaitGroup) {
+func LocalFilesSendingManager(conf data.ClientConfig) {
+
+	var wg sync.WaitGroup
+	getInfoAndSendStructure(conf, "", &wg)
+	wg.Wait()
+}
+
+func getInfoAndSendStructure(conf data.ClientConfig, path string, wg *sync.WaitGroup) {
+
+	fileDetails, err := internal.RetrieveFilesInfoFromServer(conf, path)
+
+	if err != nil {
+		fmt.Printf("error while connecting to server %v \n", err)
+		panic(1)
+	}
+
+	var localFiles map[uint32]data2.FileDetails
+	localFiles = pkg.GetFilesList(conf.LocalDirectoryPath + path)
+
+	for k, v := range fileDetails {
+		fmt.Println("remote  ", k, v.Name)
+	}
+
+	for k, v := range localFiles {
+		fmt.Println("local  ", k, v.Name)
+	}
+
+	for k, v := range localFiles {
+		if _, ok := fileDetails[k]; !ok {
+			if v.IsDirectory {
+				getInfoAndSendStructure(conf, path+"/"+v.Name, wg)
+			} else {
+				wg.Add(1)
+				go sendFileToServer(conf, path+"/"+v.Name, wg)
+			}
+		}
+	}
+}
+
+func sendFileToServer(config data.ClientConfig, filePath string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
-	path := config.DirectoryPath + "/" + fileName
+	localFilePath := config.LocalDirectoryPath + filePath
 
-	stat, err := os.Stat(path)
+	stat, err := os.Stat(localFilePath)
 
 	if os.IsNotExist(err) {
-		fmt.Printf("file not exists")
+		fmt.Printf("file not exists %v \n", err)
 	}
 
 	connection, err := net.Dial("tcp", config.ServerHost+":"+config.ServerPortTCP)
 
 	defer connection.Close()
 
-	fileDetail := convertFileDetailToBinary(fileName, uint32(stat.Size()), config.UserName)
+	fileDetail := convertFileDetailToBinary(filePath, uint32(stat.Size()), config.UserName)
 
 	_, err = connection.Write([]byte(fileDetail))
 
 	if err != nil {
-		fmt.Printf("Error while sending filename to server")
+		fmt.Println("Error while sending filename to server")
 	}
 
 	canTransferBinary := make([]byte, 2)
@@ -39,26 +80,27 @@ func SendFileToServer(config data.ClientConfig, fileName string, wg *sync.WaitGr
 	canTransfer := binary.LittleEndian.Uint16(canTransferBinary)
 
 	if err != nil {
-		fmt.Printf("error while getting permission from server %v", err)
+		fmt.Printf("error while getting permission from server %v \n", err)
 	}
 
 	if canTransfer == 0 {
-		fmt.Printf("cannot send file to server")
+		fmt.Println("cannot send file to server")
 	}
 
-	file, err := os.Open(path)
+	file, err := os.Open(localFilePath)
 	if err != nil {
-		fmt.Printf("error while opening a file %v", err)
+		fmt.Printf("error while opening a file %v \n", err)
 	}
 
+	fmt.Println("Synchronizing file... " + filePath)
 	sendingFileLoop(file, connection)
+	fmt.Println("File " + filePath + " successfully synchronized")
 
 }
 
 func sendingFileLoop(sendingFile *os.File, connection net.Conn) {
 
 	var err error
-
 	fileBuffer := make([]byte, data2.FILE_TRANSFERRED_SIZE)
 	for rSize := 1; ; {
 
@@ -68,12 +110,12 @@ func sendingFileLoop(sendingFile *os.File, connection net.Conn) {
 		}
 
 		if err != nil {
-			fmt.Printf("error while reading the file %v", err)
+			fmt.Printf("error while reading the file %v \n", err)
 		}
 		_, err = connection.Write(fileBuffer[:rSize])
 
 		if err != nil {
-			fmt.Printf("error while sending the file %v", err)
+			fmt.Printf("error while sending the file %v \n", err)
 		}
 	}
 }
