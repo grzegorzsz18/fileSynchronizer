@@ -43,7 +43,7 @@ func receiveFileFromClient(connection net.Conn) {
 	}
 
 	fileName, fileSize, fileOwner := getFileDetailsFromBinary(fileDetails, uint32(size))
-	path := fileOwner + "/" + fileName
+	path := fileOwner + fileName
 	canTransfer := make([]byte, 2)
 	binary.LittleEndian.PutUint16(canTransfer, 1)
 
@@ -56,7 +56,7 @@ func receiveFileFromClient(connection net.Conn) {
 	err = createDirStructureIfNotExists(path)
 
 	if err != nil {
-		fmt.Printf("Error creating structures %v \n", err)
+		fmt.Printf("Error creating %v structures %v \n", path, err)
 	}
 
 	file, err := os.Create(path)

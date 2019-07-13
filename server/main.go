@@ -18,7 +18,7 @@ func main() {
 
 	wg.Wait()
 
-
-
-
 }
+
+//todo list
+//checking user and password when sending file

@@ -6,13 +6,16 @@ import (
 	"fileSender/pkg/data"
 	"fileSender/server/databaseConnector/user"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"os"
 )
 
 func ApiController() {
 	http.HandleFunc("/files", files)
 	http.HandleFunc("/users", users)
+	http.HandleFunc("/users/success", success)
 	log.Fatal(http.ListenAndServe(":18080", nil))
 }
 
@@ -46,18 +49,44 @@ func files(rw http.ResponseWriter, req *http.Request) {
 }
 
 func users(rw http.ResponseWriter, req *http.Request) {
-	if req.Method == "POST" {
-		dec := json.NewDecoder(req.Body)
-		var u = data.UserDetails{}
-		_ = dec.Decode(&u)
+	switch req.Method {
+	case "POST":
+		{
+			var u = data.UserDetails{}
+			err := req.ParseForm()
+			if err != nil {
+				fmt.Printf("Error while adding new user %v \n", err)
+			}
 
-		userDb := user.GetUserDBConnection()
-		if userDb.AddUserToDB(u.Name, u.Password) != nil {
-			rw.WriteHeader(409)
-		} else {
-			rw.WriteHeader(201)
+			u.Name = req.Form.Get("Name")
+			u.Password = req.Form.Get("Password")
+
+			userDb := user.GetUserDBConnection()
+			if userDb.AddUserToDB(u.Name, u.Password) != nil {
+				rw.WriteHeader(409)
+				_, _ = rw.Write([]byte("User already exists"))
+			} else {
+				http.Redirect(rw, req, req.Header.Get("Referer")+"/success"+"?name="+u.Name, 301)
+			}
 		}
-	} else {
+	case "GET":
+		{
+			wd, _ := os.Getwd()
+			t := template.Must(template.ParseFiles(wd + "/static/addUser.gohtml"))
+			_ = t.Execute(rw, nil)
+		}
+	default:
 		rw.WriteHeader(405)
+	}
+}
+
+func success(rw http.ResponseWriter, req *http.Request) {
+	switch req.Method {
+	case "GET":
+		name := req.URL.Query().Get("name")
+
+		wd, _ := os.Getwd()
+		t := template.Must(template.ParseFiles(wd + "/static/success.gohtml"))
+		_ = t.Execute(rw, name)
 	}
 }

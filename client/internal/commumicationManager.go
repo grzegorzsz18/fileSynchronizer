@@ -25,8 +25,7 @@ func RetrieveFilesInfoFromServer(config data.ClientConfig, path string) (map[uin
 	}
 
 	if resp.StatusCode == 401 {
-		fmt.Println("WRONG PASSWORD")
-		return nil, nil
+		panic("WRONG PASSWORD")
 	}
 
 	var clientDetails map[uint32]data2.FileDetails

@@ -45,7 +45,7 @@ func (UserDB) AddUserToDB(userName string, password string) error {
 			Nick:         userName,
 			PasswordHash: data.EncodePassword(password),
 		}
-		_ = os.Mkdir(userName, 777)
+		_ = os.Mkdir(userName, 0777)
 	}
 
 	return nil
