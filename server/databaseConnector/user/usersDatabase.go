@@ -1,26 +1,21 @@
 package user
 
 import (
+	"database/sql"
 	"errors"
 	"fileSender/pkg/data"
+	_ "github.com/mattn/go-sqlite3"
 	"os"
 )
 
 type UserDB struct {
-	users map[string]User
+	connection *sql.DB
 }
 
 var userDb UserDB
 
 func ConnectToUserDatabase() {
-	users := make(map[string]User, 0)
-	users["user"] = User{
-		Nick:         "user",
-		PasswordHash: data.EncodePassword("password"),
-	}
-	userDb = UserDB{
-		users: users,
-	}
+
 }
 
 func GetUserDBConnection() UserDB {
@@ -28,25 +23,46 @@ func GetUserDBConnection() UserDB {
 }
 
 func (UserDB) CheckUserCredentials(userName string, userPassword string) bool {
-	user, ok := userDb.users[userName]
-	if !ok {
-		return false
-	} else {
-		return userPassword == user.PasswordHash
-	}
+	db, err := sql.Open("sqlite3", "./users.db")
+
+	checkErr(err)
+
+	defer db.Close()
+
+	stmt, err := db.Query("SELECT * FROM 'users' WHERE Nick=? AND PasswordHash=?", userName, userPassword)
+
+	checkErr(err)
+
+	return stmt.Next()
 }
 
 func (UserDB) AddUserToDB(userName string, password string) error {
-	_, ok := userDb.users[userName]
-	if ok {
+
+	db, err := sql.Open("sqlite3", "./users.db")
+
+	checkErr(err)
+
+	defer db.Close()
+
+	stmt, err := db.Query("SELECT * FROM 'users' WHERE Nick=?", userName)
+
+	checkErr(err)
+
+	if stmt.Next() {
 		return errors.New("User already exists")
 	} else {
-		userDb.users[userName] = User{
-			Nick:         userName,
-			PasswordHash: data.EncodePassword(password),
-		}
+		_, err = db.Exec("INSERT into 'users' values(?,?)", userName, data.EncodePassword(password))
+
+		checkErr(err)
+
 		_ = os.Mkdir(userName, 0777)
 	}
 
 	return nil
+}
+
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
