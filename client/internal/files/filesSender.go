@@ -31,14 +31,6 @@ func getInfoAndSendStructure(conf data.ClientConfig, path string, wg *sync.WaitG
 	var localFiles map[uint32]data2.FileDetails
 	localFiles = pkg.GetFilesList(conf.LocalDirectoryPath + path)
 
-	for k, v := range fileDetails {
-		fmt.Println("remote  ", k, v.Name)
-	}
-
-	for k, v := range localFiles {
-		fmt.Println("local  ", k, v.Name)
-	}
-
 	for k, v := range localFiles {
 		if _, ok := fileDetails[k]; !ok {
 			if v.IsDirectory {
@@ -46,6 +38,10 @@ func getInfoAndSendStructure(conf data.ClientConfig, path string, wg *sync.WaitG
 			} else {
 				wg.Add(1)
 				go sendFileToServer(conf, path+"/"+v.Name, wg)
+			}
+		} else {
+			if v.IsDirectory {
+				getInfoAndSendStructure(conf, path+"/"+v.Name, wg)
 			}
 		}
 	}
@@ -67,7 +63,7 @@ func sendFileToServer(config data.ClientConfig, filePath string, wg *sync.WaitGr
 
 	defer connection.Close()
 
-	fileDetail := convertFileDetailToBinary(filePath, uint32(stat.Size()), config.UserName)
+	fileDetail := convertFileDetailToBinary(filePath, uint32(stat.Size()), config.UserName, config.GetUserPasswordHash())
 
 	_, err = connection.Write([]byte(fileDetail))
 
@@ -120,9 +116,9 @@ func sendingFileLoop(sendingFile *os.File, connection net.Conn) {
 	}
 }
 
-func convertFileDetailToBinary(fileName string, fileS uint32, userName string) []byte {
+func convertFileDetailToBinary(fileName string, fileS uint32, userName string, userPassword string) []byte {
 	fileDetail := make([]byte, data2.FILE_DETAILS_SIZE)
-	fileDetail = []byte(fileName + ":" + userName)
+	fileDetail = []byte(fileName + ":" + userName + ":" + userPassword)
 	fileSize := make([]byte, 4)
 	binary.LittleEndian.PutUint32(fileSize, fileS)
 	fileDetail = append(fileDetail, fileSize...)

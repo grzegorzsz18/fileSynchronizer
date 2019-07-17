@@ -19,7 +19,3 @@ func main() {
 	wg.Wait()
 
 }
-
-//todo list
-//checking user and password when sending file
-//improve checking file hashes - modification instead? local.mod > remote.mod then sync

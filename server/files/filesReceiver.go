@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fileSender/pkg/data"
+	"fileSender/server/databaseConnector/user"
 	"fmt"
 	"net"
 	"os"
@@ -42,7 +43,14 @@ func receiveFileFromClient(connection net.Conn) {
 		fmt.Println("Error while reading filename")
 	}
 
-	fileName, fileSize, fileOwner := getFileDetailsFromBinary(fileDetails, uint32(size))
+	fileName, fileSize, fileOwner, passwordHash := getFileDetailsFromBinary(fileDetails, uint32(size))
+
+	db := user.GetUserDBConnection()
+	if !db.CheckUserCredentials(fileOwner, passwordHash) {
+		fmt.Println("Wrong user credencials")
+		return
+	}
+
 	path := fileOwner + fileName
 	canTransfer := make([]byte, 2)
 	binary.LittleEndian.PutUint16(canTransfer, 1)
@@ -87,14 +95,15 @@ func receivingFileLoop(fileSize uint32, connection net.Conn, file *os.File) {
 	}
 }
 
-func getFileDetailsFromBinary(fileDetails []byte, size uint32) (string, uint32, string) {
+func getFileDetailsFromBinary(fileDetails []byte, size uint32) (string, uint32, string, string) {
 	bytesFileDetails := fileDetails[:size-4]
 	bytesFileSize := fileDetails[size-4:]
 	fileSize := binary.LittleEndian.Uint32(bytesFileSize)
 	fileDetailsSplitted := strings.Split(string(bytesFileDetails), ":")
 	fileName := fileDetailsSplitted[0]
 	fileOwner := fileDetailsSplitted[1]
-	return fileName, fileSize, fileOwner
+	passwordHash := fileDetailsSplitted[2]
+	return fileName, fileSize, fileOwner, passwordHash
 }
 
 func createDirStructureIfNotExists(filePath string) error {
