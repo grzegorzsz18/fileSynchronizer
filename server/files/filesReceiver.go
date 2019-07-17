@@ -13,7 +13,7 @@ import (
 
 func HandleFilesReceining() {
 
-	server, err := net.Listen("tcp", "localhost:22222")
+	server, err := net.Listen("tcp", ":22222")
 	defer server.Close()
 
 	for {
